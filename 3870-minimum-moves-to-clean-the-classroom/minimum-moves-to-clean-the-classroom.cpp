@@ -3,66 +3,68 @@ public:
     int minMoves(vector<string>& classroom, int energy) {
         int m = classroom.size();
         int n = classroom[0].size();
-        vector<vector<int>> litterMap(m, vector<int>(n, -1));
-        int startX = -1, startY = -1;
-        int litterCount = 0;
-        
-        for (int i = 0; i < m; ++i) {
-            for (int j = 0; j < n; ++j) {
-                if (classroom[i][j] == 'S') {
-                    startX = i;
-                    startY = j;
-                } else if (classroom[i][j] == 'L') {
-                    litterMap[i][j] = litterCount++;
+        int start_r = -1, start_c = -1;
+        vector<pair<int, int>> litters;
+        vector<vector<int>> litter_id(m, vector<int>(n, -1));
+
+        for (int r = 0; r < m; ++r) {
+            for (int c = 0; c < n; ++c) {
+                if (classroom[r][c] == 'S') {
+                    start_r = r; start_c = c;
+                } else if (classroom[r][c] == 'L') {
+                    litter_id[r][c] = litters.size();
+                    litters.push_back({r, c});
                 }
             }
         }
-        
-        if (litterCount == 0) return 0;
-        
-        int targetMask = (1 << litterCount) - 1;
-        queue<tuple<int, int, int, int, int>> q;
-        q.push({startX, startY, energy, 0, 0});
-        
-        vector<vector<vector<vector<bool>>>> visited(m, vector<vector<vector<bool>>>(n, vector<vector<bool>>(energy + 1, vector<bool>(1 << litterCount, false))));
-        visited[startX][startY][energy][0] = true;
-        
-        int dirs[5] = {-1, 0, 1, 0, -1};
-        
+
+        int num_litters = litters.size();
+        if (num_litters == 0) return 0;
+        int target_mask = (1 << num_litters) - 1;
+
+        vector<vector<vector<int8_t>>> max_energy(
+            m, vector<vector<int8_t>>(n, vector<int8_t>(1 << num_litters, -1))
+        );
+
+        struct State { int r, c, mask, energy; };
+        queue<State> q;
+        q.push({start_r, start_c, 0, energy});
+        max_energy[start_r][start_c][0] = energy;
+
+        int moves = 0;
+        int dr[] = {-1, 1, 0, 0};
+        int dc[] = {0, 0, -1, 1};
+
         while (!q.empty()) {
-            auto [r, c, e, mask, steps] = q.front();
-            q.pop();
-            
-            for (int i = 0; i < 4; ++i) {
-                int nr = r + dirs[i];
-                int nc = c + dirs[i + 1];
-                
-                if (nr >= 0 && nr < m && nc >= 0 && nc < n && classroom[nr][nc] != 'X') {
-                    int nxt_e = e - 1;
-                    int nxt_mask = mask;
-                    
-                    if (classroom[nr][nc] == 'L') {
-                        nxt_mask |= (1 << litterMap[nr][nc]);
-                    }
-                    
-                    if (nxt_mask == targetMask) {
-                        return steps + 1;
-                    }
-                    
-                    if (classroom[nr][nc] == 'R') {
-                        nxt_e = energy;
-                    }
-                    
-                    if (nxt_e == 0 && classroom[nr][nc] != 'R') continue;
-                    
-                    if (!visited[nr][nc][nxt_e][nxt_mask]) {
-                        visited[nr][nc][nxt_e][nxt_mask] = true;
-                        q.push({nr, nc, nxt_e, nxt_mask, steps + 1});
+            int sz = q.size();
+            while (sz--) {
+                State cur = q.front(); q.pop();
+
+                if (cur.mask == target_mask) return moves;
+                if (cur.energy == 0) continue;
+
+                for (int d = 0; d < 4; ++d) {
+                    int nr = cur.r + dr[d], nc = cur.c + dc[d];
+                    if (nr < 0 || nr >= m || nc < 0 || nc >= n) continue;
+                    if (classroom[nr][nc] == 'X') continue;
+
+                    int next_mask = cur.mask;
+                    if (classroom[nr][nc] == 'L')
+                        next_mask |= (1 << litter_id[nr][nc]);
+
+                    int next_energy = cur.energy - 1;
+                    if (classroom[nr][nc] == 'R')
+                        next_energy = energy;
+
+                    if (next_energy > max_energy[nr][nc][next_mask]) {
+                        max_energy[nr][nc][next_mask] = next_energy;
+                        q.push({nr, nc, next_mask, next_energy});
                     }
                 }
             }
+            moves++;
         }
-        
+
         return -1;
     }
 };
