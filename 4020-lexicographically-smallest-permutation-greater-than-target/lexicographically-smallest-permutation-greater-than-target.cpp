@@ -3,67 +3,60 @@ public:
     string lexGreaterPermutation(string s, string target) {
         int n = s.size();
 
-        // Frequency of every character available in s.
-        vector<int> total(26, 0);
+        // Frequency of characters in s
+        vector<int> cnt(26, 0);
+
         for (char c : s) {
-            total[c - 'a']++;
+            cnt[c - 'a']++;
         }
 
-        // Characters currently used by the matching prefix of target.
-        vector<int> used(26, 0);
+        // Try the position where we make the string greater.
+        // Rightmost position is preferred.
+        for (int i = n - 1; i >= 0; i--) {
 
-        int i = 0;
+            // Rebuild the frequency array for this pivot.
+            vector<int> remain = cnt;
 
-        // Keep the prefix equal to target for as long as possible.
-        while (i < n) {
-            int c = target[i] - 'a';
+            // Try to keep target[0 ... i-1] unchanged.
+            bool possible = true;
 
-            if (used[c] == total[c]) {
-                break;
-            }
+            for (int j = 0; j < i; j++) {
+                int x = target[j] - 'a';
 
-            used[c]++;
-            i++;
-        }
-
-        // Try to make the string larger, changing the latest possible
-        // position first to preserve the longest equal prefix.
-        while (i >= 0) {
-            if (i < n) {
-                int current = target[i] - 'a';
-
-                // Choose the smallest available character greater than
-                // target[i].
-                for (int next = current + 1; next < 26; next++) {
-                    if (used[next] == total[next]) {
-                        continue;
-                    }
-
-                    string answer = target.substr(0, i);
-                    answer += char('a' + next);
-
-                    // Complete the suffix with the smallest ordering.
-                    for (int c = 0; c < 26; c++) {
-                        int remaining = total[c] - used[c];
-
-                        if (c == next) {
-                            remaining--;
-                        }
-
-                        answer += string(remaining, char('a' + c));
-                    }
-
-                    return answer;
+                if (remain[x] == 0) {
+                    possible = false;
+                    break;
                 }
+
+                remain[x]--;
             }
 
-            // The current position cannot be increased. Remove the
-            // previous target character before moving one position left.
-            if (i > 0) {
-                used[target[i - 1] - 'a']--;
-            }
+            if (!possible)
+                continue;
 
-            i--;
+            // At position i, we need the smallest
+            // available character strictly greater than target[i].
+            int targetChar = target[i] - 'a';
+
+            for (int c = targetChar + 1; c < 26; c++) {
+
+                if (remain[c] == 0)
+                    continue;
+
+                string ans = target.substr(0, i);
+
+                // Make the first difference here.
+                ans += char('a' + c);
+
+                remain[c]--;
+
+                // Fill the rest in sorted order.
+                for (int x = 0; x < 26; x++) {
+                    ans.append(remain[x], char('a' + x));
+                }
+
+                return ans;
+            }
         }
 
         return "";
